@@ -429,6 +429,15 @@ function nthWeekdayOfMonth(y, m, weekday, nth) {
   const off = (weekday - first.getDay() + 7) % 7;
   return fmt(new Date(y, m, 1 + off + 7 * (Number(nth) - 1)));
 }
+// Birtir dagsetningu sem DD/MM/YYYY (geymt sem YYYY-MM-DD í töflunni)
+function dmy(iso) {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso || '');
+}
+// Breytir öllum dagsetningum í texta yfir í DD/MM/YYYY
+function dmyText(t) {
+  return String(t || '').replace(/(\d{4})-(\d{2})-(\d{2})/g, (_, y, mo, d) => `${d}/${mo}/${y}`);
+}
 function addDaysISO(iso, n) {
   const d = new Date(iso + 'T00:00:00');
   d.setDate(d.getDate() + n);
@@ -737,7 +746,7 @@ function renderDash() {
     div.className = 'row';
     div.style.cursor = 'pointer';
     div.innerHTML = `<div><strong>${esc(l.name)}</strong>
-      <div class="muted">${esc(l.date)} kl. ${esc(l.time)}${acceptDot(l)}${l.location ? ' · ' + esc(l.location) : ''}</div></div>
+      <div class="muted">${esc(dmy(l.date))} kl. ${esc(l.time)}${acceptDot(l)}${l.location ? ' · ' + esc(l.location) : ''}</div></div>
       <span class="badge ${paid ? 'ok' : ''}">${paid ? 'Greitt' : 'Ógreitt'}</span>`;
     div.onclick = () => showLessonEdit(l.row);
     el.appendChild(div);
@@ -849,7 +858,7 @@ function renderDetail() {
     const div = document.createElement('div');
     div.className = 'row';
     const others = lessons.filter(x => x.eventId === l.eventId && x.row !== l.row && x.eventId).map(x => x.name);
-    div.innerHTML = `<div>${esc(l.date)} kl. ${esc(l.time)}${acceptDot(l)} <span class="muted">(${esc(l.mins)} mín)</span>
+    div.innerHTML = `<div>${esc(dmy(l.date))} kl. ${esc(l.time)}${acceptDot(l)} <span class="muted">(${esc(l.mins)} mín)</span>
                        <div class="muted">${esc(l.status)} · ${partialText(l)}${l.location ? ' · ' + esc(l.location) : ''}${others.length ? ' · með ' + esc(others.join(', ')) : ''}${l.notes ? ' · ' + esc(l.notes) : ''}</div></div>`;
     const actions = document.createElement('div');
     actions.className = 'actions';
@@ -883,7 +892,7 @@ function renderDetail() {
   myPayments.forEach(p => {
     const div = document.createElement('div');
     div.className = 'row';
-    div.innerHTML = `<div>${esc(p.date)} <span class="muted">${p.method ? '· ' + esc(p.method) : ''}${p.notes ? ' · ' + esc(p.notes) : ''}</span></div>
+    div.innerHTML = `<div>${esc(dmy(p.date))} <span class="muted">${p.method ? '· ' + esc(p.method) : ''}${p.notes ? ' · ' + esc(dmyText(p.notes)) : ''}</span></div>
                      <strong>${esc(p.amount)} kr.</strong>`;
     const delP = document.createElement('button');
     delP.className = 'danger';
@@ -900,7 +909,7 @@ const WEEKDAYS = ['sunnudagur', 'mánudagur', 'þriðjudagur', 'miðvikudagur', 
 const MONTHS = ['janúar', 'febrúar', 'mars', 'apríl', 'maí', 'júní', 'júlí', 'ágúst', 'september', 'október', 'nóvember', 'desember'];
 function dayLabel(iso) {
   const d = new Date(iso + 'T00:00:00');
-  return `${WEEKDAYS[d.getDay()]} ${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+  return `${WEEKDAYS[d.getDay()]} ${dmy(iso)}`;
 }
 // Tímar flokkaðir eftir degi, með vikudaginn og tímana undir hverjum degi. Komandi dagar fyrst, svo liðnir.
 function renderLessons() {
@@ -959,7 +968,7 @@ function renderPayments() {
     div.className = 'row';
     div.style.cursor = 'pointer';
     div.innerHTML = `<div><strong>${esc(p.name)}</strong>
-      <div class="muted">${esc(p.date)}${p.method ? ' · ' + esc(p.method) : ''}${p.notes ? ' · ' + esc(p.notes) : ''}</div></div>
+      <div class="muted">${esc(dmy(p.date))}${p.method ? ' · ' + esc(p.method) : ''}${p.notes ? ' · ' + esc(dmyText(p.notes)) : ''}</div></div>
       <strong>${esc(p.amount)} kr.</strong>`;
     div.onclick = () => showDetail(p.name);
     el.appendChild(div);
@@ -1048,7 +1057,7 @@ async function loadVideos() {
       }
       const info = document.createElement('div');
       info.style.flex = '1';
-      info.innerHTML = `<div style="font-size:14px">${esc(v.name)}</div><div class="muted">${esc(v.date)}</div>`;
+      info.innerHTML = `<div style="font-size:14px">${esc(v.name)}</div><div class="muted">${esc(dmy(v.date))}</div>`;
       const open = document.createElement('a');
       open.href = v.webViewLink || '#';
       open.target = '_blank';
@@ -1132,7 +1141,7 @@ function renderVideoLessons() {
   mine.forEach(l => {
     const o = document.createElement('option');
     o.value = l.row;
-    o.textContent = `${l.date} kl. ${l.time}`;
+    o.textContent = `${dmy(l.date)} kl. ${l.time}`;
     sel.appendChild(o);
   });
 }
@@ -1240,7 +1249,7 @@ function stopRecording() {
 function showRecConfirm() {
   const l = lessons.find(x => x.row === recLessonRow);
   const mb = (recBlob.size / 1048576).toFixed(1);
-  $('recQuestion').textContent = `Viltu hlaða myndskeiðinu inn í Drive fyrir tímann ${l ? l.date + ' kl. ' + l.time : ''}? (${mb} MB)`;
+  $('recQuestion').textContent = `Viltu hlaða myndskeiðinu inn í Drive fyrir tímann ${l ? dmy(l.date) + ' kl. ' + l.time : ''}? (${mb} MB)`;
   $('recConfirm').classList.remove('hidden');
   msg('');
 }
@@ -1483,8 +1492,7 @@ $('lInterval').onchange = syncRepeatUI;
 // Vikuyfirlit: mánudagur til sunnudags, með tímum hvers dags
 let weekOffset = 0;
 function shortDate(iso) {
-  const d = new Date(iso + 'T00:00:00');
-  return `${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+  return dmy(iso).slice(0, 5);
 }
 function renderWeek() {
   const today = todayISO();
@@ -1562,7 +1570,7 @@ async function togglePaid(l) {
 }
 
 async function deleteLesson(l) {
-  if (!confirm(`Eyða tíma ${l.date} kl. ${l.time} hjá ${l.name}?`)) return;
+  if (!confirm(`Eyða tíma ${dmy(l.date)} kl. ${l.time} hjá ${l.name}?`)) return;
   try {
     msg('Eyði tíma...');
     // Viðburðinum er eytt bara ef enginn annar nemandi er skráður á hann.
@@ -1705,7 +1713,7 @@ function showLessonEdit(row) {
   $('backBtn').classList.remove('hidden');
   $('title').textContent = 'Tími';
   $('leTitle').textContent = l.name;
-  $('leInfo').textContent = `${l.date} kl. ${l.time} · ${l.mins} mín${l.location ? ' · ' + l.location : ''} · ${l.status}`;
+  $('leInfo').textContent = `${dmy(l.date)} kl. ${l.time} · ${l.mins} mín${l.location ? ' · ' + l.location : ''} · ${l.status}`;
   $('leDate').value = l.date;
   $('leTime').value = l.time;
   $('leMins').value = l.mins;
@@ -1764,7 +1772,7 @@ async function addPayment() {
 $('addPaymentBtn').onclick = addPayment;
 
 async function deletePayment(p) {
-  if (!confirm(`Eyða greiðslu ${p.amount} kr. frá ${p.date}?`)) return;
+  if (!confirm(`Eyða greiðslu ${p.amount} kr. frá ${dmy(p.date)}?`)) return;
   try {
     msg('Eyði greiðslu...');
     await deleteRows([{ sheetId: 2, row: p.row }]);
