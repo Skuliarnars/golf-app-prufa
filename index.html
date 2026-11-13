@@ -587,12 +587,11 @@ async function deleteCalendarEvent(id) {
 // ----- Gögn -----
 async function loadAll() {
   msg('Hleð gögnum...');
-  const [n, t, g, s] = await Promise.all([
-    getRows("'Nemendur'!A2:H"),
-    getRows("'Tímar'!A2:J"),
-    getRows("'Greiðslur'!A2:F"),
-    getRows("'Stillingar'!B1")
-  ]);
+  // Ein beiðni í stað fjögurra, svo appið fari síður yfir lestrarmörk Google Sheets
+  const ranges = ["'Nemendur'!A2:H", "'Tímar'!A2:J", "'Greiðslur'!A2:F", "'Stillingar'!B1"]
+    .map(r => 'ranges=' + encodeURIComponent(r)).join('&');
+  const batch = await api(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values:batchGet?${ranges}`);
+  const [n, t, g, s] = batch.valueRanges.map(v => v.values || []);
   students = n.map((r, i) => ({ row: i + 2, name: r[0] || '', phone: r[1] || '', email: r[2] || '', goal: r[3] || '',
                                 notes: r[4] || '', handicap: r[6] || '', driveFolder: r[7] || '' }))
               .filter(x => x.name);
